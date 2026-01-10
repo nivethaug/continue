@@ -10,7 +10,26 @@ const esbuildConfig = {
   entryPoints: ["src/extension.ts"],
   bundle: true,
   outfile: "out/extension.js",
-  external: ["vscode", "esbuild", "./xhr-sync-worker.js"],
+  external: [
+    // VS Code + build tooling
+    "vscode",
+    "esbuild",
+    "./xhr-sync-worker.js",
+
+    // Continue workspace packages (NEVER bundle)
+    "@continuedev/*",
+    "@continuedev/config-yaml",
+    "@continuedev/terminal-security",
+
+    // Local workspace paths (monorepo)
+    "../../../packages/*",
+    "../../../../packages/*",
+
+    // Runtime-only deps (syntax highlighting, etc.)
+    "shiki",
+    "@shikijs/transformers",
+  ],
+
   format: "cjs",
   platform: "node",
   sourcemap: flags.includes("--sourcemap"),

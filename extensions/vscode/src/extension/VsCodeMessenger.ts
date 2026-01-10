@@ -36,7 +36,7 @@ import { getExtensionUri } from "../util/vscode";
 import { VsCodeIde } from "../VsCodeIde";
 import { VsCodeWebviewProtocol } from "../webviewProtocol";
 
-import { encodeFullSlug } from "../../../../packages/config-yaml/dist";
+import { encodeFullSlug } from "@continuedev/config-yaml";
 import { VsCodeExtension } from "./VsCodeExtension";
 
 type ToIdeOrWebviewFromCoreProtocol = ToIdeFromCoreProtocol &

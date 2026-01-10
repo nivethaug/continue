@@ -1,7 +1,7 @@
 {
-  "name": "continue",
+  "name": "dreamcode",
   "icon": "media/icon.png",
-  "author": "Continue Dev, Inc",
+  "author": "DreamBigWithAI",
   "version": "1.3.28",
   "repository": {
     "type": "git",
@@ -20,8 +20,8 @@
   "license": "Apache-2.0",
   "displayName": "Continue - open-source AI code agent",
   "pricing": "Free",
-  "description": "The leading open-source AI code agent",
-  "publisher": "Continue",
+  "description": "DreamCode is an AI-powered coding assistant built on Continue",
+  "publisher": "DreamBigWithAI",
   "engines": {
     "vscode": "^1.70.0",
     "node": ">=20.19.0"
@@ -53,7 +53,12 @@
   "activationEvents": [
     "onUri",
     "onStartupFinished",
-    "onView:continueGUIView"
+    "onView:continue.continueGUIView",
+    "onCommand:continue.newSession",
+    "onCommand:continue.viewHistory",
+    "onCommand:continue.openConfigPage",
+    "onCommand:continue.viewLogs",
+    "onCommand:continue.focusContinueInput"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -153,234 +158,219 @@
     "commands": [
       {
         "command": "continue.applyCodeFromChat",
-        "category": "Continue",
-        "title": "Apply code from chat",
-        "group": "Continue"
+        "category": "DreamCode",
+        "title": "DreamCode: Apply Code from Chat",
+        "group": "DreamCode"
       },
       {
         "command": "continue.acceptDiff",
-        "category": "Continue",
-        "title": "Accept Diff",
-        "group": "Continue"
+        "category": "DreamCode",
+        "title": "DreamCode: Accept Diff",
+        "group": "DreamCode"
       },
       {
         "command": "continue.rejectDiff",
-        "category": "Continue",
-        "title": "Reject Diff",
-        "group": "Continue",
+        "category": "DreamCode",
+        "title": "DreamCode: Reject Diff",
+        "group": "DreamCode",
         "icon": "$(stop)"
       },
       {
         "command": "continue.acceptVerticalDiffBlock",
-        "category": "Continue",
-        "title": "Accept Vertical Diff Block",
-        "group": "Continue"
+        "category": "DreamCode",
+        "title": "DreamCode: Accept Vertical Diff Block",
+        "group": "DreamCode"
       },
       {
         "command": "continue.rejectVerticalDiffBlock",
-        "category": "Continue",
-        "title": "Reject Vertical Diff Block",
-        "group": "Continue"
+        "category": "DreamCode",
+        "title": "DreamCode: Reject Vertical Diff Block",
+        "group": "DreamCode"
       },
       {
         "command": "continue.focusEdit",
-        "category": "Continue",
-        "title": "Add to Edit",
-        "group": "Continue"
+        "category": "DreamCode",
+        "title": "DreamCode: Add to Edit",
+        "group": "DreamCode"
       },
       {
         "command": "continue.focusContinueInput",
-        "category": "Continue",
-        "title": "Add Highlighted Code to Context and Clear Chat",
-        "group": "Continue"
+        "category": "DreamCode",
+        "title": "DreamCode: Add Highlighted Code to Context (New Chat)",
+        "group": "DreamCode"
       },
       {
         "command": "continue.focusContinueInputWithoutClear",
-        "category": "Continue",
-        "title": "Add to Chat",
-        "group": "Continue"
+        "category": "DreamCode",
+        "title": "DreamCode: Add Highlighted Code to Chat",
+        "group": "DreamCode"
       },
       {
         "command": "continue.debugTerminal",
-        "category": "Continue",
-        "title": "Debug Terminal",
-        "group": "Continue"
+        "category": "DreamCode",
+        "title": "DreamCode: Debug Terminal",
+        "group": "DreamCode"
       },
       {
         "command": "continue.exitEditMode",
-        "category": "Continue",
-        "title": "Exit Edit Mode",
-        "group": "Continue"
+        "category": "DreamCode",
+        "title": "DreamCode: Exit Edit Mode",
+        "group": "DreamCode"
       },
       {
         "command": "continue.openConfigPage",
-        "category": "Continue",
-        "title": "Open Settings",
+        "category": "DreamCode",
+        "title": "DreamCode: Open Settings",
         "icon": "$(gear)",
-        "group": "Continue"
+        "group": "DreamCode"
       },
       {
         "command": "continue.toggleTabAutocompleteEnabled",
-        "category": "Continue",
-        "title": "Toggle Autocomplete Enabled",
-        "group": "Continue"
+        "category": "DreamCode",
+        "title": "DreamCode: Toggle Autocomplete",
+        "group": "DreamCode"
       },
       {
         "command": "continue.forceAutocomplete",
-        "title": "Continue: Force Autocomplete",
-        "category": "Continue"
+        "category": "DreamCode",
+        "title": "DreamCode: Force Autocomplete"
       },
       {
         "command": "continue.selectFilesAsContext",
-        "category": "Continue",
-        "title": "Select Files as Context",
-        "group": "Continue"
+        "category": "DreamCode",
+        "title": "DreamCode: Select Files as Context",
+        "group": "DreamCode"
       },
       {
         "command": "continue.newSession",
-        "category": "Continue",
-        "title": "New Session",
+        "category": "DreamCode",
+        "title": "DreamCode: New Chat Session",
         "icon": "$(add)",
-        "group": "Continue"
+        "group": "DreamCode"
       },
       {
         "command": "continue.shareSession",
-        "category": "Continue",
-        "title": "Share Current Chat Session as Markdown",
-        "group": "Continue"
+        "category": "DreamCode",
+        "title": "DreamCode: Share Chat Session as Markdown",
+        "group": "DreamCode"
       },
       {
         "command": "continue.viewHistory",
-        "category": "Continue",
-        "title": "View History",
+        "category": "DreamCode",
+        "title": "DreamCode: View Chat History",
         "icon": "$(history)",
-        "group": "Continue"
+        "group": "DreamCode"
       },
       {
         "command": "continue.viewLogs",
-        "category": "Continue",
-        "title": "View Logs",
-        "group": "Continue"
+        "category": "DreamCode",
+        "title": "DreamCode: View Logs",
+        "group": "DreamCode"
       },
       {
         "command": "continue.clearConsole",
-        "category": "Continue",
-        "title": "Clear Console",
+        "category": "DreamCode",
+        "title": "DreamCode: Clear Console",
         "icon": "$(clear-all)",
-        "group": "Continue"
+        "group": "DreamCode"
       },
       {
         "command": "continue.navigateTo",
-        "category": "Continue",
-        "title": "Navigate to a path",
-        "group": "Continue"
+        "category": "DreamCode",
+        "title": "DreamCode: Navigate to Path",
+        "group": "DreamCode"
       },
       {
         "command": "continue.writeCommentsForCode",
-        "category": "Continue",
-        "title": "Write Comments for this Code",
-        "group": "Continue"
+        "category": "DreamCode",
+        "title": "DreamCode: Write Comments for Code",
+        "group": "DreamCode"
       },
       {
         "command": "continue.writeDocstringForCode",
-        "category": "Continue",
-        "title": "Write a Docstring for this Code",
-        "group": "Continue"
+        "category": "DreamCode",
+        "title": "DreamCode: Write Docstring for Code",
+        "group": "DreamCode"
       },
       {
         "command": "continue.fixCode",
-        "category": "Continue",
-        "title": "Fix this Code",
-        "group": "Continue"
+        "category": "DreamCode",
+        "title": "DreamCode: Fix Code",
+        "group": "DreamCode"
       },
       {
         "command": "continue.optimizeCode",
-        "category": "Continue",
-        "title": "Optimize this Code",
-        "group": "Continue"
+        "category": "DreamCode",
+        "title": "DreamCode: Optimize Code",
+        "group": "DreamCode"
       },
       {
         "command": "continue.fixGrammar",
-        "category": "Continue",
-        "title": "Fix Grammar / Spelling",
-        "group": "Continue"
+        "category": "DreamCode",
+        "title": "DreamCode: Fix Grammar / Spelling",
+        "group": "DreamCode"
       },
       {
         "command": "continue.codebaseForceReIndex",
-        "category": "Continue",
-        "title": "Codebase Force Re-Index",
-        "group": "Continue"
+        "category": "DreamCode",
+        "title": "DreamCode: Force Codebase Re-Index",
+        "group": "DreamCode"
       },
       {
         "command": "continue.rebuildCodebaseIndex",
-        "category": "Continue",
-        "title": "Rebuild codebase index",
-        "group": "Continue"
+        "category": "DreamCode",
+        "title": "DreamCode: Rebuild Codebase Index",
+        "group": "DreamCode"
       },
       {
         "command": "continue.docsIndex",
-        "category": "Continue",
-        "title": "Docs Index",
-        "group": "Continue"
+        "category": "DreamCode",
+        "title": "DreamCode: Index Documentation",
+        "group": "DreamCode"
       },
       {
         "command": "continue.docsReIndex",
-        "category": "Continue",
-        "title": "Docs Force Re-Index",
-        "group": "Continue"
-      },
-      {
-        "command": "continue.focusContinueInput",
-        "category": "Continue",
-        "title": "Focus Continue Chat",
-        "group": "Continue"
+        "category": "DreamCode",
+        "title": "DreamCode: Force Docs Re-Index",
+        "group": "DreamCode"
       },
       {
         "command": "continue.enterEnterpriseLicenseKey",
-        "category": "Continue",
-        "title": "Enter Enterprise License Key",
-        "group": "Continue"
+        "category": "DreamCode",
+        "title": "DreamCode: Enter License Key",
+        "group": "DreamCode"
       },
       {
         "command": "continue.toggleNextEditEnabled",
-        "title": "Continue: Toggle Next Edit"
-      },
-      {
-        "command": "continue.nextEditWindow.hideNextEditSuggestion",
-        "category": "Continue",
-        "title": "Hide Next Edit Suggestion"
-      },
-      {
-        "command": "continue.nextEditWindow.acceptNextEditSuggestion",
-        "category": "Continue",
-        "title": "Accept Next Edit Suggestion"
+        "category": "DreamCode",
+        "title": "DreamCode: Toggle Next Edit"
       },
       {
         "command": "continue.forceNextEdit",
-        "category": "Continue",
-        "title": "Continue: Force Next Edit"
+        "category": "DreamCode",
+        "title": "DreamCode: Force Next Edit"
       },
       {
         "command": "continue.acceptJump",
-        "category": "Continue",
-        "title": "Continue: Accept Jump Suggestion"
+        "category": "DreamCode",
+        "title": "DreamCode: Accept Jump Suggestion"
       },
       {
         "command": "continue.rejectJump",
-        "category": "Continue",
-        "title": "Continue: Reject Jump Suggestion"
+        "category": "DreamCode",
+        "title": "DreamCode: Reject Jump Suggestion"
       },
       {
         "command": "continue.generateRule",
-        "category": "Continue",
-        "title": "Generate Rule",
-        "group": "Continue"
+        "category": "DreamCode",
+        "title": "DreamCode: Generate Rule",
+        "group": "DreamCode"
       },
       {
         "command": "continue.openInNewWindow",
-        "category": "Continue",
-        "title": "Open in new window",
-        "group": "Continue"
+        "category": "DreamCode",
+        "title": "DreamCode: Open in New Window",
+        "group": "DreamCode"
       }
     ],
     "keybindings": [
@@ -540,18 +530,18 @@
       "editor/title/run": [
         {
           "command": "continue.rejectDiff",
-          "group": "Continue",
+          "group": "DreamCode",
           "when": "continue.streamingDiff"
         }
       ],
       "continue.continueSubMenu": [
         {
           "command": "continue.focusContinueInputWithoutClear",
-          "group": "Continue"
+          "group": "DreamCode"
         },
         {
           "command": "continue.focusEdit",
-          "group": "Continue",
+          "group": "DreamCode",
           "when": "!editorReadonly"
         }
       ],
@@ -606,8 +596,8 @@
       "activitybar": [
         {
           "id": "continue",
-          "title": "Continue",
-          "icon": "media/sidebar-icon.png"
+          "title": "DreamCode",
+          "icon": "media/icon.png"
         }
       ],
       "panel": [
@@ -729,10 +719,15 @@
   },
   "dependencies": {
     "@continuedev/config-types": "file:../../packages/config-types",
+    "@continuedev/config-yaml": "file:../../packages/config-yaml",
     "@continuedev/fetch": "file:../../packages/fetch",
+    "@continuedev/llm-info": "file:../../packages/llm-info",
+    "@continuedev/openai-adapters": "file:../../packages/openai-adapters",
+    "@continuedev/terminal-security": "file:../../packages/terminal-security",
     "@electron/rebuild": "^3.2.10",
     "@reduxjs/toolkit": "^1.9.3",
-    "@vscode/ripgrep": "^1.15.9",
+    "@shikijs/transformers": "^3.21.0",
+    "@vscode/ripgrep": "^1.17.0",
     "axios": "^1.13.1",
     "core": "file:../../core",
     "cors": "^2.8.5",
@@ -751,6 +746,7 @@
     "https-proxy-agent": "^7.0.2",
     "ignore": "^5.3.0",
     "jsdom": "^24.0.0",
+    "lodash": "^4.17.21",
     "lru-cache": "^11.0.2",
     "minisearch": "^7.0.0",
     "mocha": "^11.7.5",
@@ -764,18 +760,22 @@
     "react-redux": "^8.0.5",
     "read-last-lines": "^1.8.0",
     "request": "^2.88.2",
+    "shiki": "^3.21.0",
     "socket.io-client": "^4.7.2",
     "strip-ansi": "^7.1.0",
     "svg-builder": "^2.0.0",
     "systeminformation": "^5.27.14",
     "tailwindcss": "^3.3.2",
     "undici": "^6.21.3",
+    "uri-js": "^4.4.1",
     "uuid": "^9.0.1",
     "uuidv4": "^6.2.13",
     "vectordb": "0.4.20",
     "vitest": "^3.1.4",
     "vscode-languageclient": "^8.0.2",
+    "workerpool": "^10.0.1",
     "ws": "^8.13.0",
+    "yaml": "^2.8.2",
     "yarn": "^1.22.21"
   },
   "overrides": {
