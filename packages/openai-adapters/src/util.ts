@@ -1,4 +1,5 @@
-import { RequestOptions } from "@continuedev/config-types";
+//packages/openai-adapters/src/util.ts
+import type { RequestOptions } from "@continuedev/config-types";
 import { fetchwithRequestOptions, patchedFetch } from "@continuedev/fetch";
 import {
   ChatCompletionChunk,

@@ -12,13 +12,20 @@ import { getExtensionVersion } from "./util/util";
 export { default as buildTimestamp } from "./.buildTimestamp";
 
 async function dynamicImportAndActivate(context: vscode.ExtensionContext) {
+  console.log("[DreamCode] dynamic activation start");
+
   await setupCa();
-  const { activateExtension } = await import("./activation/activate");
-  return await activateExtension(context);
+  console.log("[DreamCode] setupCa done");
+
+  const mod = await import("./activation/activate");
+  console.log("[DreamCode] activate module loaded", mod);
+
+  return await mod.activateExtension(context);
 }
 
 export function activate(context: vscode.ExtensionContext) {
-  return dynamicImportAndActivate(context).catch((e) => {
+  // ✅ fire-and-forget async activation
+  dynamicImportAndActivate(context).catch((e) => {
     console.log("Error activating extension: ", e);
     Telemetry.capture(
       "vscode_extension_activation_error",
@@ -35,11 +42,15 @@ export function activate(context: vscode.ExtensionContext) {
         "View Logs",
         "Retry",
       )
-      .then((selection) => {
+      .then(async (selection) => {
         if (selection === "View Logs") {
-          vscode.commands.executeCommand("continue.viewLogs");
+          const commands = await vscode.commands.getCommands(true);
+          if (commands.includes("continue.viewLogs")) {
+            vscode.commands.executeCommand("continue.viewLogs");
+          } else {
+            vscode.commands.executeCommand("workbench.action.toggleDevTools");
+          }
         } else if (selection === "Retry") {
-          // Reload VS Code window
           vscode.commands.executeCommand("workbench.action.reloadWindow");
         }
       });

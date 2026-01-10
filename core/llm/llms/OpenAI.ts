@@ -5,6 +5,12 @@ import {
 
 import { streamSse } from "@continuedev/fetch";
 import {
+  ResponseCreateParamsBase,
+  ResponseInputItem,
+  ResponseInputMessageContentList,
+  Tool as ResponsesTool,
+} from "openai/resources/responses/responses.mjs";
+import {
   ChatMessage,
   CompletionOptions,
   LLMOptions,
@@ -19,13 +25,6 @@ import {
   toChatBody,
   toResponsesInput,
 } from "../openaiTypeConverters.js";
-import {
-  ResponseInput,
-  ResponseInputItem,
-  ResponseInputMessageContentList,
-  ResponseCreateParamsBase,
-  Tool as ResponsesTool,
-} from "openai/resources/responses/responses.mjs";
 
 const NON_CHAT_MODELS = [
   "text-davinci-002",
@@ -371,11 +370,18 @@ class OpenAI extends BaseLLM {
   }
 
   protected _getHeaders() {
-    return {
+    const headers: Record<string, string> = {
       "Content-Type": "application/json",
-      ...(this.apiKey && { Authorization: `Bearer ${this.apiKey}` }),
-      "api-key": this.apiKey ?? "", // For Azure
     };
+
+    if (this.apiKey) {
+      headers.Authorization = `Bearer ${this.apiKey}`;
+
+      // ✅ REQUIRED for GLM (Zhipu)
+      headers["X-API-Key"] = this.apiKey;
+    }
+
+    return headers;
   }
 
   protected async _complete(
@@ -493,7 +499,20 @@ class OpenAI extends BaseLLM {
     const args: any = this._convertArgs(options, []);
     args.prompt = prompt;
     args.messages = undefined;
+    const endpoint = this._getEndpoint("completions");
+    const headers = this._getHeaders();
 
+    console.log("🔵 GLM REQUEST");
+    console.log("URL:", endpoint.toString());
+    console.log("HEADERS:", headers);
+    console.log(
+      "BODY:",
+      JSON.stringify({
+        ...args,
+        stream: true,
+        ...this.extraBodyProperties(),
+      }),
+    );
     const response = await this.fetch(this._getEndpoint("completions"), {
       method: "POST",
       headers: this._getHeaders(),

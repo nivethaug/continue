@@ -1,1 +1,7 @@
-{}
+{
+  "files": [],
+  "references": [
+    { "path": "./packages/config-types" },
+    { "path": "./packages/openai-adapters" }
+  ]
+}
