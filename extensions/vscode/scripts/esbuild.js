@@ -11,23 +11,12 @@ const esbuildConfig = {
   bundle: true,
   outfile: "out/extension.js",
   external: [
-    // VS Code + build tooling
+    // VS Code provided
     "vscode",
+
+    // Native / tooling only
     "esbuild",
     "./xhr-sync-worker.js",
-
-    // Continue workspace packages (NEVER bundle)
-    "@continuedev/*",
-    "@continuedev/config-yaml",
-    "@continuedev/terminal-security",
-
-    // Local workspace paths (monorepo)
-    "../../../packages/*",
-    "../../../../packages/*",
-
-    // Runtime-only deps (syntax highlighting, etc.)
-    "shiki",
-    "@shikijs/transformers",
   ],
 
   format: "cjs",
