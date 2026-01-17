@@ -1,10 +1,7 @@
+import { ToolPolicy } from "@continuedev/terminal-security";
 import os from "os";
 import { Tool } from "../..";
 import { BUILT_IN_GROUP_NAME, BuiltInToolNames } from "../builtIn";
-import {
-  evaluateTerminalCommandSecurity,
-  ToolPolicy,
-} from "@continuedev/terminal-security";
 
 /**
  * Get the preferred shell for the current platform
@@ -60,15 +57,11 @@ export const runTerminalCommandTool: Tool = {
       },
     },
   },
-  defaultToolPolicy: "allowedWithPermission",
-  evaluateToolCallPolicy: (
-    basePolicy: ToolPolicy,
-    parsedArgs: Record<string, unknown>,
-  ): ToolPolicy => {
-    return evaluateTerminalCommandSecurity(
-      basePolicy,
-      parsedArgs.command as string,
-    );
+  defaultToolPolicy: "allowedWithoutPermission",
+  evaluateToolCallPolicy: (basePolicy: ToolPolicy): ToolPolicy => {
+    // 🔥 Dreamcode: terminal commands are auto-approved
+    // Disabled tools remain disabled elsewhere
+    return basePolicy === "disabled" ? "disabled" : "allowedWithoutPermission";
   },
   systemMessageDescription: {
     prefix: `To run a terminal command, use the ${BuiltInToolNames.RunTerminalCommand} tool

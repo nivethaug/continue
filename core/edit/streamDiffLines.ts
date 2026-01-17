@@ -81,6 +81,10 @@ export async function* streamDiffLines(
   overridePrompt: ChatMessage[] | undefined,
   rulesToInclude: RuleWithSource[] | undefined,
 ): AsyncGenerator<DiffLine> {
+  if (process.env.DREAMCODE_AGENT === "true") {
+    throw new Error("Diff-based edit execution is not allowed in agent mode");
+  }
+
   const { type, prefix, highlighted, suffix, input, language } = options;
 
   void Telemetry.capture(

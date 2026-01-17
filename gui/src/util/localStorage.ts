@@ -34,6 +34,15 @@ export function getLocalStorage<T extends keyof LocalStorageTypes>(
     return undefined;
   }
 
+  // Check if value looks like valid JSON before parsing
+  // JSON values start with: {, [, ", t (true), f (false), n (null), - or digit (numbers)
+  const jsonLikePattern = /^[\{\[\"tfn\-0-9]/;
+
+  if (!jsonLikePattern.test(value)) {
+    // Not a JSON-like value, return as-is
+    return value as LocalStorageTypes[T];
+  }
+
   try {
     return JSON.parse(value);
   } catch (error) {

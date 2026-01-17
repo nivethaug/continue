@@ -16,6 +16,37 @@ export async function resolveRelativePathInDir(
   ide: IDE,
   dirUriCandidates?: string[],
 ): Promise<string | undefined> {
+  // Handle absolute paths directly - bypass relative path resolution
+  const os = require("os");
+  const pathModule = require("path");
+  const { pathToFileURL } = require("url");
+
+  // Enhanced Windows absolute path detection
+  // Matches: /C:/..., /D:/..., C:\..., D:\..., C:/..., D:/...
+  const windowsAbsolutePathRegex = /^\/?[A-Za-z]:[/\\]/;
+  const isWindowsAbsolute =
+    os.platform() === "win32" &&
+    (pathModule.isAbsolute(path) || windowsAbsolutePathRegex.test(path));
+  const isUnixAbsolute =
+    os.platform() !== "win32" && pathModule.isAbsolute(path);
+
+  if (isWindowsAbsolute || isUnixAbsolute) {
+    let absolutePath = path;
+
+    // Remove leading / from POSIX-style Windows paths (/C:/... -> C:/...)
+    if (os.platform() === "win32" && absolutePath.startsWith("/")) {
+      absolutePath = absolutePath.slice(1);
+    }
+
+    const uri = pathToFileURL(absolutePath).href;
+
+    // Verify the file exists before returning
+    if (await ide.fileExists(uri)) {
+      return uri;
+    }
+    return undefined;
+  }
+
   const dirs = dirUriCandidates ?? (await ide.getWorkspaceDirs());
   for (const dirUri of dirs) {
     const fullUri = joinPathsToUri(dirUri, path);
@@ -39,6 +70,33 @@ export async function inferResolvedUriFromRelativePath(
   dirCandidates?: string[],
 ): Promise<string> {
   const relativePath = _relativePath.trim().replaceAll("\\", "/");
+
+  // Handle absolute paths directly - bypass relative path inference
+  const os = require("os");
+  const path = require("path");
+  const { pathToFileURL } = require("url");
+
+  // Enhanced Windows absolute path detection
+  // Matches: /C:/..., /D:/..., C:\..., D:\..., C:/..., D:/...
+  const windowsAbsolutePathRegex = /^\/?[A-Za-z]:[/\\]/;
+  const isWindowsAbsolute =
+    os.platform() === "win32" &&
+    (path.isAbsolute(_relativePath) ||
+      windowsAbsolutePathRegex.test(_relativePath));
+  const isUnixAbsolute =
+    os.platform() !== "win32" && path.isAbsolute(_relativePath);
+
+  if (isWindowsAbsolute || isUnixAbsolute) {
+    let absolutePath = _relativePath;
+
+    // Remove leading / from POSIX-style Windows paths (/C:/... -> C:/...)
+    if (os.platform() === "win32" && absolutePath.startsWith("/")) {
+      absolutePath = absolutePath.slice(1);
+    }
+
+    return pathToFileURL(absolutePath).href;
+  }
+
   const dirs = dirCandidates ?? (await ide.getWorkspaceDirs());
 
   if (dirs.length === 0) {

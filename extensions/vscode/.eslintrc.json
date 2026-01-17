@@ -4,6 +4,9 @@
     "project": "./tsconfig.json"
   },
   "extends": ["../../.eslintrc.shared.json"],
+
+  "ignorePatterns": ["scripts/**", "*.js"],
+
   "rules": {
     "@typescript-eslint/naming-convention": "off",
     "@typescript-eslint/no-floating-promises": "warn",

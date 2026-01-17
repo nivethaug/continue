@@ -7,6 +7,13 @@ import { extractMinimalStackTraceInfo } from "core/util/extractMinimalStackTrace
 import { Telemetry } from "core/util/posthog";
 import * as vscode from "vscode";
 
+import "@continuedev/config-types";
+import "@continuedev/config-yaml";
+import "@continuedev/fetch";
+import "@continuedev/llm-info";
+import "@continuedev/openai-adapters";
+import "@continuedev/terminal-security";
+import "@shikijs/transformers";
 import { SentryLogger } from "core/util/sentry/SentryLogger";
 import { getExtensionVersion } from "./util/util";
 export { default as buildTimestamp } from "./.buildTimestamp";

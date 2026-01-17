@@ -18,6 +18,10 @@ export async function* streamLazyApply(
   llm: ILLM,
   abortController: AbortController,
 ): AsyncGenerator<DiffLine> {
+  if (process.env.DREAMCODE_AGENT === "true") {
+    throw new Error("Lazy apply is disabled in agent mode");
+  }
+
   const promptFactory = lazyApplyPromptForModel(llm.model, llm.providerName);
   if (!promptFactory) {
     throw new Error(`Lazy apply not supported for model ${llm.model}`);

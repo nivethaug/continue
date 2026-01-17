@@ -55,6 +55,10 @@ export function lazyApplyPromptForModel(
   model: string,
   provider: string,
 ): LazyApplyPrompt | undefined {
+  if (process.env.DREAMCODE_AGENT === "true") {
+    return undefined;
+  }
+
   if (model.includes("sonnet")) {
     return claudeSonnetLazyApplyPrompt;
   }

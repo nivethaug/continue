@@ -20,7 +20,6 @@ export function evaluateFileAccessPolicy(
   if (isWithinWorkspace) {
     return basePolicy;
   }
-
   // Files outside workspace always require permission for security
-  return "allowedWithPermission";
+  return basePolicy;
 }

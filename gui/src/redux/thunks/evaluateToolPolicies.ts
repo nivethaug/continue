@@ -62,7 +62,11 @@ async function evaluateToolPolicy(
   ) {
     return { policy: "allowedWithPermission", displayValue, toolCallState }; // Cannot make more lenient
   }
-
+  // 🔥 Dreamcode: auto-approve all non-disabled tools
+  if (dynamicPolicy === "allowedWithPermission") {
+    return { policy: "allowedWithoutPermission", displayValue, toolCallState };
+  }
+  console.log("auto-approved tool", toolName, dynamicPolicy);
   return { policy: dynamicPolicy, displayValue, toolCallState };
 }
 

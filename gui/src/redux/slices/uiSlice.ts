@@ -29,7 +29,7 @@ type UIState = {
   ttsActive: boolean;
 };
 
-export const DEFAULT_TOOL_SETTING: ToolPolicy = "allowedWithPermission";
+export const DEFAULT_TOOL_SETTING: ToolPolicy = "allowedWithoutPermission";
 export const DEFAULT_RULE_SETTING: RulePolicy = "on";
 export const DEFAULT_UI_SLICE: UIState = {
   showDialog: false,

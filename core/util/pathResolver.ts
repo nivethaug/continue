@@ -49,21 +49,49 @@ export async function resolveInputPath(
   // Expand tilde paths (handles ~/ and ~username/)
   const expandedPath = untildify(trimmedPath);
 
+  // Handle Windows paths with leading slash (POSIX-style: /C:/... -> C:/...)
+  let normalizedPath = expandedPath;
+  const os = require("os");
+  if (os.platform() === "win32" && normalizedPath.startsWith("/")) {
+    // Check if this is a Windows absolute path with leading slash
+    // Pattern: /C:/... or /D:/... where C/D is a drive letter
+    const windowsAbsolutePathRegex = /^\/[A-Za-z]:/;
+    if (windowsAbsolutePathRegex.test(normalizedPath)) {
+      normalizedPath = normalizedPath.slice(1); // Remove leading /
+    }
+  }
+
   // Check if it's an absolute path (including Windows paths)
   const isAbsolute =
-    path.isAbsolute(expandedPath) ||
+    path.isAbsolute(normalizedPath) ||
     // Windows network paths
-    expandedPath.startsWith("\\\\") ||
+    normalizedPath.startsWith("\\\\") ||
     // Windows drive letters
-    /^[a-zA-Z]:/.test(expandedPath);
+    /^[a-zA-Z]:/.test(normalizedPath);
 
   if (isAbsolute) {
     // Convert to file:// URI format
-    const uri = pathToFileURL(expandedPath).href;
+    const uri = pathToFileURL(normalizedPath).href;
+
+    // For absolute paths, check if file exists directly
+    // Don't require workspace membership for absolute paths
+    const fileExists = await ide.fileExists(uri);
+    if (fileExists) {
+      const isWithinWorkspace = await isUriWithinWorkspace(ide, uri);
+      return {
+        uri,
+        displayPath: normalizedPath,
+        isAbsolute: true,
+        isWithinWorkspace,
+      };
+    }
+
+    // File doesn't exist, but it's a valid absolute path
+    // Return it anyway (for files to be created, etc.)
     const isWithinWorkspace = await isUriWithinWorkspace(ide, uri);
     return {
       uri,
-      displayPath: expandedPath,
+      displayPath: normalizedPath,
       isAbsolute: true,
       isWithinWorkspace,
     };
