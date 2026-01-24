@@ -210,8 +210,6 @@ class OpenAI extends BaseLLM {
     "embed",
     "list",
     "rerank",
-    "streamChat",
-    "streamFim",
   ];
 
   protected _convertModelName(model: string): string {
@@ -220,6 +218,11 @@ class OpenAI extends BaseLLM {
 
   public isOSeriesOrGpt5Model(model?: string): boolean {
     return !!model && (!!model.match(/^o[0-9]+/) || model.includes("gpt-5"));
+  }
+
+  // NEW: Detect GLM API
+  private isGLMAPI(): boolean {
+    return this.apiBase?.includes("api.z.ai/api/coding") ?? false;
   }
 
   private isFireworksAiModel(model?: string): boolean {
@@ -311,7 +314,14 @@ class OpenAI extends BaseLLM {
     } else {
       finalOptions.prediction = undefined;
     }
-
+    console.log("<GLM>", this.isGLMAPI());
+    // 🔥 GLM-specific fix
+    if (this.isGLMAPI()) {
+      (finalOptions as any).thinking = {
+        type: "disabled",
+        clear_thinking: true,
+      };
+    }
     return finalOptions;
   }
 
@@ -537,6 +547,7 @@ class OpenAI extends BaseLLM {
     options: CompletionOptions,
   ): AsyncGenerator<ChatMessage> {
     if (
+      !this.isGLMAPI() &&
       !isChatOnlyModel(options.model) &&
       this.supportsCompletions() &&
       (NON_CHAT_MODELS.includes(options.model) ||
@@ -555,7 +566,6 @@ class OpenAI extends BaseLLM {
       }
       return;
     }
-
     const body = this._convertArgs(options, messages);
 
     const response = await this.fetch(this._getEndpoint("chat/completions"), {
@@ -567,7 +577,6 @@ class OpenAI extends BaseLLM {
       }),
       signal,
     });
-
     // Handle non-streaming response
     if (body.stream === false) {
       if (response.status === 499) {
@@ -579,6 +588,16 @@ class OpenAI extends BaseLLM {
     }
 
     for await (const value of streamSse(response)) {
+      const rawDelta = value?.choices?.[0]?.delta;
+      // 🚫 DROP reasoning completely
+      if (
+        rawDelta?.reasoning_content ||
+        rawDelta?.reasoning ||
+        rawDelta?.reasoning_details
+      ) {
+        console.log("🔴 DROPPED REASONING DELTA:", rawDelta);
+        continue;
+      }
       const chunk = fromChatCompletionChunk(value);
       if (chunk) {
         yield chunk;
@@ -671,12 +690,77 @@ class OpenAI extends BaseLLM {
     return { role: "assistant", content: "" };
   }
 
+  // GLM-specific FIM streaming implementation
+  protected async *_streamGLMFim(
+    prefix: string,
+    suffix: string,
+    signal: AbortSignal,
+    options: CompletionOptions,
+  ): AsyncGenerator<string> {
+    // GLM uses completions endpoint (not fim/completions)
+    // Remove trailing slash if present
+    const url = this.apiBase!.endsWith("/")
+      ? this.apiBase!.slice(0, -1)
+      : this.apiBase!;
+    const endpoint = `${url}/completions`;
+
+    const body = {
+      model: options.model,
+      messages: [
+        {
+          role: "user",
+          content: `<fim_prefix>${prefix}<fim_suffix>${suffix}<fim_middle>`,
+        },
+      ],
+      max_tokens: options.maxTokens,
+      temperature: options.temperature,
+      top_p: options.topP,
+      stream: true,
+    };
+
+    console.log("🔵 GLM FIM AUTOCOMPLETE REQUEST");
+    console.log("Endpoint:", endpoint);
+    console.log("Body:", JSON.stringify(body));
+
+    const response = await this.fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "x-api-key": this.apiKey ?? "",
+        Authorization: `Bearer ${this.apiKey}`,
+      },
+      body: JSON.stringify({
+        ...body,
+        ...this.extraBodyProperties(),
+      }),
+      signal,
+    });
+
+    console.log("🔵 GLM FIM STATUS:", response.status);
+
+    for await (const chunk of streamSse(response)) {
+      // GLM SSE format: data: { choices: [{ delta: { content: "..." }] }
+      if (chunk.choices?.[0]?.delta?.content) {
+        yield chunk.choices[0].delta.content;
+      } else if (chunk.choices?.[0]?.text) {
+        yield chunk.choices[0].text;
+      }
+    }
+  }
   protected async *_streamFim(
     prefix: string,
     suffix: string,
     signal: AbortSignal,
     options: CompletionOptions,
   ): AsyncGenerator<string> {
+    // GLM uses custom FIM format
+    if (this.isGLMAPI()) {
+      yield* this._streamGLMFim(prefix, suffix, signal, options);
+      return;
+    }
+
+    // OpenAI/OpenAI-compatible FIM
     const endpoint = new URL("fim/completions", this.apiBase);
     const resp = await this.fetch(endpoint, {
       method: "POST",
@@ -702,7 +786,7 @@ class OpenAI extends BaseLLM {
       signal,
     });
     for await (const chunk of streamSse(resp)) {
-      yield chunk.choices[0].delta.content;
+      yield chunk.choices[0]?.delta?.content ?? "";
     }
   }
 
@@ -719,7 +803,7 @@ class OpenAI extends BaseLLM {
   private _getEmbedEndpoint() {
     if (!this.apiBase) {
       throw new Error(
-        "No API base URL provided. Please set the 'apiBase' option in config.json",
+        "No API base URL provided. Please set to 'apiBase' option in config.json",
       );
     }
 

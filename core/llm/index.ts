@@ -414,7 +414,11 @@ export abstract class BaseLLM implements ILLM {
   private async parseError(resp: any): Promise<Error> {
     let text = await resp.text();
 
-    if (resp.status === 404 && !resp.url.includes("/v1")) {
+    if (
+      resp.status === 404 &&
+      !resp.url.includes("/v1") &&
+      this.providerName !== "glm"
+    ) {
       const parsedError = JSON.parse(text);
       const errorMessageRaw = parsedError?.error ?? parsedError?.message;
       const error =
@@ -432,7 +436,11 @@ export abstract class BaseLLM implements ILLM {
         text =
           "This may mean that you forgot to add '/v1' to the end of your 'apiBase' in config.json.";
       }
-    } else if (resp.status === 404 && resp.url.includes("api.openai.com")) {
+    } else if (
+      resp.status === 404 &&
+      resp.url.includes("api.openai.com") &&
+      this.providerName !== "glm"
+    ) {
       text =
         "You may need to add pre-paid credits before using the OpenAI API.";
     } else if (

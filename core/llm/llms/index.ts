@@ -66,6 +66,8 @@ import Vllm from "./Vllm";
 import Voyage from "./Voyage";
 import WatsonX from "./WatsonX";
 import xAI from "./xAI";
+import GLM from "./GLM.js";
+
 export const LLMClasses = [
   Anthropic,
   Cohere,
@@ -118,6 +120,7 @@ export const LLMClasses = [
   VertexAI,
   xAI,
   SiliconFlow,
+  GLM,
   Scaleway,
   Relace,
   Inception,

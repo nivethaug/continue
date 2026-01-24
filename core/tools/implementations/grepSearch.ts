@@ -1,3 +1,5 @@
+import { spawn } from "child_process";
+import { fileURLToPath } from "url";
 import { ToolImpl } from ".";
 import { ContextItem } from "../..";
 import { ContinueError, ContinueErrorReason } from "../../util/errors";
@@ -6,11 +8,10 @@ import { prepareQueryForRipgrep } from "../../util/regexValidator";
 import { getStringArg } from "../parseArgs";
 
 const DEFAULT_GREP_SEARCH_RESULTS_LIMIT = 100;
-const DEFAULT_GREP_SEARCH_CHAR_LIMIT = 7500; // ~1500 tokens, will keep truncation simply for now
+const DEFAULT_GREP_SEARCH_CHAR_LIMIT = 7500; // ~1500 tokens
 
 function splitGrepResultsByFile(content: string): ContextItem[] {
   const matches = [...content.matchAll(/^\.\/([^\n]+)$/gm)];
-
   const contextItems: ContextItem[] = [];
 
   for (let i = 0; i < matches.length; i++) {
@@ -20,10 +21,9 @@ function splitGrepResultsByFile(content: string): ContextItem[] {
     const endIndex =
       i < matches.length - 1 ? matches[i + 1].index! : content.length;
 
-    // Extract grepped content for this file
     const fileContent = content
       .substring(startIndex, endIndex)
-      .replace(/^\.\/[^\n]+\n/, "") // remove the line with file path
+      .replace(/^\.\/[^\n]+\n/, "")
       .trim();
 
     if (fileContent) {
@@ -39,35 +39,145 @@ function splitGrepResultsByFile(content: string): ContextItem[] {
   return contextItems;
 }
 
+function normalizeWorkspaceDir(dir: string): string {
+  if (dir.startsWith("file://")) {
+    return fileURLToPath(dir);
+  }
+  return dir;
+}
+
+async function runGrepSearchWithSystemRg(
+  query: string,
+  maxResults: number,
+  ide: any,
+): Promise<string> {
+  const workspaceDirs = await ide.getWorkspaceDirs();
+
+  if (!workspaceDirs || workspaceDirs.length === 0) {
+    throw new ContinueError(
+      ContinueErrorReason.SearchExecutionFailed,
+      "No workspace directories found for grep_search",
+    );
+  }
+
+  const outputs: string[] = [];
+
+  for (const dir of workspaceDirs) {
+    const dirPath = normalizeWorkspaceDir(dir);
+
+    const output = await new Promise<string>((resolve, reject) => {
+      const child = spawn(
+        "rg",
+        [
+          "-i",
+          "--heading",
+          "--line-number",
+          ...(maxResults ? ["-m", maxResults.toString()] : []),
+          query,
+          ".",
+        ],
+        {
+          cwd: dirPath,
+          env: process.env,
+        },
+      );
+
+      let stdout = "";
+      let stderr = "";
+
+      child.stdout.on("data", (d) => (stdout += d.toString()));
+      child.stderr.on("data", (d) => (stderr += d.toString()));
+
+      child.on("close", (code) => {
+        if (code === 0 || code === 1) {
+          resolve(stdout);
+        } else {
+          reject(
+            new Error(`ripgrep exited with code ${code}: ${stderr.trim()}`),
+          );
+        }
+      });
+
+      child.on("error", (err) => {
+        reject(
+          new Error(`ripgrep execution failed (rg missing?): ${err.message}`),
+        );
+      });
+    });
+
+    if (output.trim()) {
+      outputs.push(output);
+    }
+  }
+
+  return outputs.join("\n");
+}
+
 export const grepSearchImpl: ToolImpl = async (args, extras) => {
   const rawQuery = getStringArg(args, "query");
-
   const { query, warning } = prepareQueryForRipgrep(rawQuery);
 
-  let results: string;
+  let results: string | null = null;
+
+  // 1️⃣ Try system ripgrep first (no VS Code dependency)
   try {
-    results = await extras.ide.getSearchResults(
+    results = await runGrepSearchWithSystemRg(
       query,
       DEFAULT_GREP_SEARCH_RESULTS_LIMIT,
+      extras.ide,
     );
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? error.message : String(error);
 
-    // Helpful error for common ripgrep exit code
-    if (errorMessage.includes("Process exited with code 2")) {
+    // 2️⃣ If rg missing or failed → fallback to IDE search
+    if (
+      message.includes("rg missing") ||
+      message.includes("ENOENT") ||
+      message.includes("ripgrep execution failed")
+    ) {
+      try {
+        results = await extras.ide.getSearchResults(
+          query,
+          DEFAULT_GREP_SEARCH_RESULTS_LIMIT,
+        );
+      } catch (fallbackError) {
+        const fallbackMessage =
+          fallbackError instanceof Error
+            ? fallbackError.message
+            : String(fallbackError);
+
+        throw new ContinueError(
+          ContinueErrorReason.SearchExecutionFailed,
+          `grep_search failed. System rg unavailable and IDE search failed: ${fallbackMessage}`,
+        );
+      }
+    } else if (
+      message.includes("invalid regex") ||
+      message.includes("code 2")
+    ) {
       return [
         {
           name: "Search error",
-          description: "The search query could not be processed",
-          content: `The search failed due to an invalid regex pattern.\n\nOriginal query: ${rawQuery}\nProcessed query: ${query}\n\nError: ${errorMessage}\n\nTip: If you're searching for literal text with special characters, the query was automatically escaped. If you need regex patterns, ensure they use proper regex syntax.`,
+          description: "Invalid search pattern",
+          content: `Invalid regex.\n\nOriginal: ${rawQuery}\nProcessed: ${query}\n\n${message}`,
         },
       ];
+    } else {
+      throw new ContinueError(
+        ContinueErrorReason.SearchExecutionFailed,
+        message,
+      );
     }
+  }
 
-    throw new ContinueError(
-      ContinueErrorReason.SearchExecutionFailed,
-      errorMessage,
-    );
+  if (!results) {
+    return [
+      {
+        name: "Search results",
+        description: "Results from grep search",
+        content: "The search returned no results.",
+      },
+    ];
   }
 
   const { formatted, numResults, truncated } = formatGrepSearchResults(
@@ -97,38 +207,34 @@ export const grepSearchImpl: ToolImpl = async (args, extras) => {
     );
   }
 
-  let contextItems: ContextItem[];
-
-  const splitByFile: boolean = args?.splitByFile || false;
-  if (splitByFile) {
-    contextItems = splitGrepResultsByFile(formatted);
-  } else {
-    contextItems = [
-      {
-        name: "Search results",
-        description: "Results from grep search",
-        content: formatted,
-      },
-    ];
-  }
-
-  // Add warnings about query modifications or truncation
-  const warnings: string[] = [];
-  if (warning) {
-    warnings.push(warning);
-  }
-  if (truncationReasons.length > 0) {
-    warnings.push(
-      `Results were truncated because ${truncationReasons.join(" and ")}`,
-    );
-  }
+  const splitByFile = Boolean(args?.splitByFile);
+  const contextItems: ContextItem[] = splitByFile
+    ? splitGrepResultsByFile(formatted)
+    : [
+        {
+          name: "Search results",
+          description: "Results from grep search",
+          content: formatted,
+        },
+      ];
 
   if (truncationReasons.length > 0) {
     contextItems.push({
       name: "Truncation warning",
       description: "",
-      content: `The above search results were truncated because ${truncationReasons.join(" and ")}. If the results are not satisfactory, try refining your search query.`,
+      content: `The above search results were truncated because ${truncationReasons.join(
+        " and ",
+      )}.`,
     });
   }
+
+  if (warning) {
+    contextItems.push({
+      name: "Query warning",
+      description: "",
+      content: warning,
+    });
+  }
+
   return contextItems;
 };

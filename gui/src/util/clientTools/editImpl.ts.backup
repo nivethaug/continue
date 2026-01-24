@@ -1,0 +1,197 @@
+import { resolveRelativePathInDir } from "core/util/ideUtils";
+import { v4 as uuid } from "uuid";
+import { applyForEditTool } from "../../redux/thunks/handleApplyStateUpdate";
+import { ClientToolExtras, ClientToolImpl } from "./callClientTool";
+import { singleFindAndReplaceImpl } from "./singleFindAndReplaceImpl";
+
+// Size guard to prevent token limit errors
+const MAX_SAFE_CHARS = 25000;
+
+/**
+ * Extract code content from markdown text.
+ * If a markdown code block exists, returns ONLY code inside FIRST code block.
+ * Strips ``` fences and language tags completely.
+ * If no code block is found, returns original text unchanged.
+ */
+function extractCodeFromMarkdown(text: string): string {
+  // Match first code block: ```language\ncode\n```
+  const codeBlockRegex =
+    /```(?:javascript|typescript|js|ts|python|java|cpp|csharp|go|rust|html|css|json|xml|sql)?\n?([\s\S]*?)\n?```/i;
+  const match = text.match(codeBlockRegex);
+  if (match && match[1]) {
+    // Return content inside code block (group 1), without fences or language tags
+    return match[1].trim();
+  }
+
+  // If no code block, return original text
+  return text;
+}
+
+/**
+ * Normalizes line endings to match Windows system (CRLF).
+ * Converts all \n to \r\n to match file system format.
+ */
+function normalizeLineEndings(text: string): string {
+  return text.replace(/\n/g, "\r\n");
+}
+
+function isGLMModel(extras: ClientToolExtras): boolean {
+  try {
+    const state = extras.getState();
+    const selectedChatModel = state.config.config.selectedModelByRole.chat;
+
+    if (!selectedChatModel) {
+      return false;
+    }
+
+    // Check if model name contains "glm" (case-insensitive)
+    const modelName = selectedChatModel.model?.toLowerCase() || "";
+
+    return modelName.includes("glm");
+  } catch (e) {
+    console.log("[editTool] Error detecting GLM model:", e);
+    return false;
+  }
+}
+
+export const editToolImpl: ClientToolImpl = async (
+  args,
+  toolCallId,
+  extras,
+) => {
+  if (!args.filepath || !args.changes) {
+    throw new Error(
+      "`filepath` and `changes` arguments are required to edit an existing file.",
+    );
+  }
+
+  // PREPROCESSING: Normalize args.changes to extract code from markdown
+  const normalizedChanges = extractCodeFromMarkdown(args.changes);
+  console.log(`[editTool] Original changes length: ${args.changes.length}`);
+  console.log(
+    `[editTool] Original changes preview (first 200 chars):`,
+    args.changes.substring(0, 200),
+  );
+  console.log(
+    `[editTool] Normalized changes length: ${normalizedChanges.length}`,
+  );
+  console.log(
+    `[editTool] Normalized changes preview (first 200 chars):`,
+    normalizedChanges.substring(0, 200),
+  );
+  console.log(
+    `[editTool] Changes are identical: ${args.changes === normalizedChanges}`,
+  );
+
+  // IMPORTANT: Check if normalized changes are empty or only whitespace
+  const trimmedChanges = normalizedChanges.trim();
+  if (!trimmedChanges || trimmedChanges.length === 0) {
+    throw new Error(
+      "No code content found to apply. The tool input must contain actual source code, not just markdown or analysis.",
+    );
+  }
+
+  // Resolve file path FIRST and normalize
+  let filepath = args.filepath;
+  if (filepath.startsWith("./")) {
+    filepath = filepath.slice(2);
+  }
+
+  let firstUriMatch = await resolveRelativePathInDir(
+    filepath,
+    extras.ideMessenger.ide,
+  );
+
+  if (!firstUriMatch) {
+    const openFiles = await extras.ideMessenger.ide.getOpenFiles();
+    for (const uri of openFiles) {
+      if (uri.endsWith(filepath)) {
+        firstUriMatch = uri;
+        break;
+      }
+    }
+  }
+
+  if (!firstUriMatch) {
+    throw new Error(`${filepath} does not exist`);
+  }
+
+  // GLM-specific handling: size guard and automatic fallback
+  if (isGLMModel(extras)) {
+    console.log(
+      `[editTool] GLM detected, normalized changes size: ${normalizedChanges.length} chars`,
+    );
+
+    // CRITICAL FIX: Normalize line endings to match Windows file system
+    const finalChanges = normalizeLineEndings(normalizedChanges);
+    console.log(
+      `[editTool] Line endings normalized, final length: ${finalChanges.length}`,
+    );
+
+    if (finalChanges.length > MAX_SAFE_CHARS) {
+      console.log(
+        `[editTool] Changes exceed ${MAX_SAFE_CHARS} chars, converting to single_find_and_replace`,
+      );
+
+      // Read original file content directly from disk
+      const originalContent =
+        await extras.ideMessenger.ide.readFile(firstUriMatch);
+
+      // Call single_find_and_replace with original → new replacement
+      // Use normalizedChanges (extracted code with fixed line endings) instead of full conversational text
+      // Use already resolved firstUriMatch instead of args.filepath
+      const replaceResult = await singleFindAndReplaceImpl(
+        {
+          filepath: firstUriMatch,
+          old_string: originalContent,
+          new_string: finalChanges,
+        },
+        toolCallId,
+        extras,
+      );
+
+      // Return result directly
+      return replaceResult;
+    }
+
+    // GLM within size limits - proceed with normal edit
+    console.log(
+      `[editTool] GLM edit within size limits, using normal edit path`,
+    );
+
+    const streamId = uuid();
+    void extras.dispatch(
+      applyForEditTool({
+        streamId,
+        text: finalChanges,
+        toolCallId,
+        filepath: firstUriMatch,
+      }),
+    );
+
+    return {
+      respondImmediately: false,
+      output: undefined, // no immediate output - output for edit tools should be added based on apply state coming in
+    };
+  }
+
+  // Non-GLM models: preserve existing behavior
+  // Use normalizedChanges (extracted code) for both GLM and non-GLM
+  console.log(
+    `[editTool] Applying normal edit with ${normalizedChanges.length} chars`,
+  );
+  const streamId = uuid();
+  void extras.dispatch(
+    applyForEditTool({
+      streamId,
+      text: normalizedChanges,
+      toolCallId,
+      filepath: firstUriMatch,
+    }),
+  );
+
+  return {
+    respondImmediately: false,
+    output: undefined,
+  };
+};

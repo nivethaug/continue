@@ -6,6 +6,17 @@ import {
   pathToUriPathSegment,
 } from "./uri";
 
+// Dynamic imports for Node.js modules (works in VSCode extension, not bundled for browser)
+let os: any;
+let pathModule: any;
+let pathToFileURL: any;
+
+if (typeof require !== "undefined") {
+  os = require("os");
+  pathModule = require("path");
+  pathToFileURL = require("url").pathToFileURL;
+}
+
 /*
   This function takes a relative (to workspace) filepath
   And checks each workspace for if it exists or not
@@ -17,30 +28,27 @@ export async function resolveRelativePathInDir(
   dirUriCandidates?: string[],
 ): Promise<string | undefined> {
   // Handle absolute paths directly - bypass relative path resolution
-  const os = require("os");
-  const pathModule = require("path");
-  const { pathToFileURL } = require("url");
 
   // Enhanced Windows absolute path detection
   // Matches: /C:/..., /D:/..., C:\..., D:\..., C:/..., D:/...
   const windowsAbsolutePathRegex = /^\/?[A-Za-z]:[/\\]/;
   const isWindowsAbsolute =
-    os.platform() === "win32" &&
-    (pathModule.isAbsolute(path) || windowsAbsolutePathRegex.test(path));
+    os?.platform() === "win32" &&
+    (pathModule?.isAbsolute(path) || windowsAbsolutePathRegex.test(path));
   const isUnixAbsolute =
-    os.platform() !== "win32" && pathModule.isAbsolute(path);
+    os?.platform() !== "win32" && pathModule?.isAbsolute(path);
 
   if (isWindowsAbsolute || isUnixAbsolute) {
     let absolutePath = path;
 
     // Remove leading / from POSIX-style Windows paths (/C:/... -> C:/...)
-    if (os.platform() === "win32" && absolutePath.startsWith("/")) {
+    if (os?.platform() === "win32" && absolutePath.startsWith("/")) {
       absolutePath = absolutePath.slice(1);
     }
 
     const uri = pathToFileURL(absolutePath).href;
 
-    // Verify the file exists before returning
+    // Verify file exists before returning
     if (await ide.fileExists(uri)) {
       return uri;
     }
@@ -60,9 +68,9 @@ export async function resolveRelativePathInDir(
 
 /*
   Same as above but in this case the relative path does not need to exist (e.g. file to be created, etc)
-  Checks closes match with the dirs, path segment by segment
+  Checks closes match with dirs, path segment by segment
   and based on which workspace has the closest matching path, returns resolved URI
-  If no meaninful path match just concatenates to first dir's uri
+  If no meaningful path match just concatenates to first dir's uri
 */
 export async function inferResolvedUriFromRelativePath(
   _relativePath: string,
@@ -72,25 +80,22 @@ export async function inferResolvedUriFromRelativePath(
   const relativePath = _relativePath.trim().replaceAll("\\", "/");
 
   // Handle absolute paths directly - bypass relative path inference
-  const os = require("os");
-  const path = require("path");
-  const { pathToFileURL } = require("url");
 
   // Enhanced Windows absolute path detection
   // Matches: /C:/..., /D:/..., C:\..., D:\..., C:/..., D:/...
   const windowsAbsolutePathRegex = /^\/?[A-Za-z]:[/\\]/;
   const isWindowsAbsolute =
-    os.platform() === "win32" &&
-    (path.isAbsolute(_relativePath) ||
+    os?.platform() === "win32" &&
+    (pathModule?.isAbsolute(_relativePath) ||
       windowsAbsolutePathRegex.test(_relativePath));
   const isUnixAbsolute =
-    os.platform() !== "win32" && path.isAbsolute(_relativePath);
+    os?.platform() !== "win32" && pathModule?.isAbsolute(_relativePath);
 
   if (isWindowsAbsolute || isUnixAbsolute) {
     let absolutePath = _relativePath;
 
     // Remove leading / from POSIX-style Windows paths (/C:/... -> C:/...)
-    if (os.platform() === "win32" && absolutePath.startsWith("/")) {
+    if (os?.platform() === "win32" && absolutePath.startsWith("/")) {
       absolutePath = absolutePath.slice(1);
     }
 
@@ -137,7 +142,7 @@ export async function inferResolvedUriFromRelativePath(
     }
   }
 
-  // Sometimes the model will decide to only output the base name or small number of path parts
+  // Sometimes the model will decide to only output the base name or a small number of path parts
   // in which case we shouldn't create a new file if it matches the current file
   const activeFile = await ide.getCurrentFile();
   if (activeFile && activeFile.path.endsWith(relativePath)) {
