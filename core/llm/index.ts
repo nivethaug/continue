@@ -37,6 +37,7 @@ import { renderChatMessage } from "../util/messageContent.js";
 import { isOllamaInstalled } from "../util/ollamaHelper.js";
 import { TokensBatchingService } from "../util/TokensBatchingService.js";
 import { withExponentialBackoff } from "../util/withExponentialBackoff.js";
+import { preprocessMessagesForVision } from "./vision/preprocessMessagesForVision.js";
 
 import {
   autodetectPromptTemplates,
@@ -162,6 +163,7 @@ export abstract class BaseLLM implements ILLM {
 
   // continueProperties
   apiKeyLocation?: string;
+  isvisionEnabled?: boolean;
   envSecretLocations?: Record<string, string>;
   apiBase?: string;
   orgScopeId?: string | null;
@@ -1110,7 +1112,20 @@ export abstract class BaseLLM implements ILLM {
     const msg = await (this as any)._responses(messages, signal, options);
     yield msg as ChatMessage;
   }
+  messagesContainImages(msgs: ChatMessage[]): boolean {
+    for (const msg of msgs) {
+      if (msg.role !== "user") continue;
+      if (!Array.isArray(msg.content)) continue;
 
+      for (const part of msg.content) {
+        console.log("confi", process.env.DREAMCODE_AGENT);
+        if (typeof part === "object" && (part as any).type === "imageUrl") {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
   // Update the streamChat method:
   async *streamChat(
     _messages: ChatMessage[],
@@ -1143,6 +1158,22 @@ export abstract class BaseLLM implements ILLM {
 
       messages = compiledChatMessages;
     }
+    const visionConfig: any = {
+      enabled: true,
+      apiBase: this.apiBase,
+      provider: "glm-4.6v",
+      apiKey: this.apiKey,
+    };
+    if (visionConfig?.enabled && this.messagesContainImages(messages)) {
+      console.log("MESSAGES BEFORE VISION PREPROCESSING:", messages);
+      messages = await preprocessMessagesForVision(
+        messages,
+        { vision: false },
+        visionConfig,
+      );
+      console.log("MESSAGES AFTER VISION PREPROCESSING:", messages);
+    }
+    console.log("FINAL MESSAGES SENT TO LLM:", messages);
 
     const messagesCopy = [...messages]; // templateMessages may modify messages.
 

@@ -140,6 +140,7 @@ const MODEL_SUPPORTS_IMAGES: RegExp[] = [
   /gemini-1\.5-flash/,
   /sonnet/,
   /opus/,
+  /glm/,
   /haiku/,
   /pixtral/,
   /llama-?3\.2/,

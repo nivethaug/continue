@@ -368,6 +368,8 @@ export function isRecommendedAgentModel(modelName: string): boolean {
     [/gemini/, /2\.5/, /pro/],
     [/gemini/, /3-pro/],
     [/gpt/, /-5|5\.1/],
+    [/glm/, /4\.7/],
+    [/glm/, /4\.[6-9]|[5-9]\./],
     [/claude/, /sonnet/, /3\.7|3-7|-4/],
     [/claude/, /opus/, /-4/],
     [/grok-code/],

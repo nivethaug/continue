@@ -44,10 +44,6 @@ export function applyUnifiedDiff(
   sourceCode: string,
   unifiedDiffText: string,
 ): DiffLine[] {
-  if (process.env.DREAMCODE_AGENT === "true") {
-    throw new Error("Unified diff apply is not allowed in agent mode");
-  }
-
   const sourceLines = sourceCode.split(/\r?\n/);
   const hunks = parseUnifiedDiff(unifiedDiffText);
   const diffResult: DiffLine[] = [];

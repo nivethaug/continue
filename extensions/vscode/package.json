@@ -12,15 +12,15 @@
     "workspace"
   ],
   "bugs": {
-    "url": "https://github.com/continuedev/continue/issues",
-    "email": "nate@continue.dev"
+    "url": "https://github.com/dreamcode/issues",
+    "email": "dreamcode@dreambigwithai.com"
   },
-  "homepage": "https://continue.dev",
-  "qna": "https://github.com/continuedev/continue/issues/new/choose",
+  "homepage": "https://dreamcode.dreambigwithai.com/",
+  "qna": "https://github.com/dreamcode/issues",
   "license": "Apache-2.0",
-  "displayName": "Continue - open-source AI code agent",
+  "displayName": "DreamCode — AI Code Agent",
   "pricing": "Free",
-  "description": "DreamCode is an AI-powered coding assistant built on Continue",
+  "description": "DreamCode is an AI-powered coding assistant",
   "publisher": "DreamBigWithAI",
   "engines": {
     "vscode": "^1.70.0",
@@ -603,7 +603,7 @@
       "panel": [
         {
           "id": "continueConsole",
-          "title": "Continue Console",
+          "title": "Dreamcode",
           "icon": "$(window)"
         }
       ]
@@ -613,7 +613,7 @@
         {
           "type": "webview",
           "id": "continue.continueGUIView",
-          "name": "Continue",
+          "name": "Dreamcode",
           "icon": "media/sidebar-icon.png",
           "visibility": "visible"
         }

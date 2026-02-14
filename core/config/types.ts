@@ -558,11 +558,15 @@ declare global {
     // GCP Options
     capabilities?: ModelCapability;
   
-    // GCP and Watsonx Options
+    import VisionConfig from "core/config/types_vision";
+
+  // GCP and Watsonx Options
     projectId?: string;
   
-    // IBM watsonx Options
+  // IBM watsonx Options
     deploymentId?: string;
+    vision?: VisionConfig;
+
   }
   
   type RequireAtLeastOne<T, Keys extends keyof T = keyof T> = Pick<

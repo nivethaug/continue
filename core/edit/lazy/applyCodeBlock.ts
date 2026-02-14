@@ -21,16 +21,12 @@ export async function applyCodeBlock(
   isInstantApply: boolean;
   diffLinesGenerator: AsyncGenerator<DiffLine>;
 }> {
-  if (process.env.DREAMCODE_AGENT === "true") {
-    throw new Error("Code block apply is not allowed in agent mode");
-  }
-
   if (canUseInstantApply(filename)) {
     const diffLines = await deterministicApplyLazyEdit({
       oldFile,
       newLazyFile,
       filename,
-      onlyFullFileRewrite: true,
+      onlyFullFileRewrite: false,
     });
 
     if (diffLines !== undefined) {

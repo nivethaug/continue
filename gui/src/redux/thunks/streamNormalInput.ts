@@ -146,7 +146,6 @@ export const streamNormalInput = createAsyncThunk<
       state.ui.ruleSettings,
       systemToolsFramework,
     );
-
     // TODO parallel tool calls will cause issues with this
     // because there will be multiple tool messages, so which one should have applied rules?
     dispatch(
@@ -163,6 +162,7 @@ export const streamNormalInput = createAsyncThunk<
       messages,
       options: completionOptions,
     });
+    console.log("[streamNormalInput] precompiledRes:", precompiledRes);
 
     if (precompiledRes.status === "error") {
       if (precompiledRes.error.includes("Not enough context")) {

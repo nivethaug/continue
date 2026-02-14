@@ -71,16 +71,6 @@ core/
 - Network paths: `\\server\share` supported
 - Absolute paths work without workspace membership requirement
 
-### 6. Important Code Patterns
-
-**Agent Mode Guard Pattern:**
-
-```typescript
-if (process.env.DREAMCODE_AGENT === "true") {
-  throw new Error("Feature disabled in agent mode");
-}
-```
-
 **Auto-Approval Pattern:**
 
 ```typescript
