@@ -71,6 +71,7 @@ async function modelConfigToBaseLLM({
       tools: model.capabilities?.includes("tool_use"),
       uploadImage: model.capabilities?.includes("image_input"),
       nextEdit: model.capabilities?.includes("next_edit"),
+      vision: model.capabilities?.includes("vision"),
     },
     autocompleteOptions: model.autocompleteOptions,
     isFromAutoDetect,

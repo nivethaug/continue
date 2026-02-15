@@ -1118,13 +1118,132 @@ export abstract class BaseLLM implements ILLM {
       if (!Array.isArray(msg.content)) continue;
 
       for (const part of msg.content) {
-        console.log("confi", process.env.DREAMCODE_AGENT);
         if (typeof part === "object" && (part as any).type === "imageUrl") {
           return true;
         }
       }
     }
     return false;
+  }
+
+  /**
+   * Check if model supports vision natively
+   * Returns true if either:
+   * - capabilities.vision is explicitly set to true
+   * - capabilities.uploadImage is true (backward compatibility)
+   */
+  protected supportsNativeVision(): boolean {
+    if (this.capabilities?.vision !== undefined) {
+      return this.capabilities.vision;
+    }
+    // Fallback to uploadImage capability for backward compatibility
+    return this.capabilities?.uploadImage ?? false;
+  }
+
+  /**
+   * Detect vision provider from model configuration
+   */
+  private detectVisionProvider(
+    model: ILLM,
+  ): "glm-4.6v" | "gpt-4o-mini-vision" | undefined {
+    const modelLower = model.model.toLowerCase();
+    const providerLower = model.providerName.toLowerCase();
+
+    // Check for GLM models
+    if (
+      modelLower.includes("glm") ||
+      providerLower.includes("zhipu") ||
+      providerLower.includes("glm")
+    ) {
+      return "glm-4.6v";
+    }
+
+    // Check for OpenAI GPT models
+    if (modelLower.includes("gpt") || providerLower === "openai") {
+      return "gpt-4o-mini-vision";
+    }
+
+    // Default fallback
+    console.warn(
+      `Unknown vision provider for model ${model.model}, defaulting to glm-4.6v`,
+    );
+    return "glm-4.6v";
+  }
+
+  /**
+   * Get vision configuration dynamically
+   * Priority:
+   * 1. If model supports native vision → undefined (no fallback needed)
+   * 2. If no images in messages → undefined
+   * 3. Search for vision_llm role in available models (requires models to be passed)
+   */
+  protected async getVisionConfig(
+    messages: ChatMessage[],
+    allModels?: ILLM[],
+  ): Promise<
+    | {
+        enabled: boolean;
+        provider: "glm-4.6v" | "gpt-4o-mini-vision";
+        apiKey?: string;
+        apiBase?: string;
+      }
+    | undefined
+  > {
+    // If model has native vision support, no fallback needed
+    if (this.supportsNativeVision()) {
+      console.log("Model has native vision support, skipping fallback");
+      return undefined;
+    }
+
+    // If no images in messages, no vision config needed
+    if (!this.messagesContainImages(messages)) {
+      return undefined;
+    }
+
+    // Search for vision_llm model in available models
+    if (!allModels || allModels.length === 0) {
+      console.warn(
+        "No models available for vision fallback, using default GLM vision",
+      );
+      // Fallback to default GLM config if no vision_llm model found
+      return {
+        enabled: true,
+        provider: "glm-4.6v",
+        apiKey: this.apiKey,
+        apiBase: this.apiBase,
+      };
+    }
+
+    const visionModel = allModels.find((model) =>
+      model.roles?.includes("vision_llm" as ModelRole),
+    );
+
+    if (!visionModel) {
+      console.warn(
+        "No model with vision_llm role found for image processing, using default",
+      );
+      // Fallback to default config if no vision_llm model found
+      return {
+        enabled: true,
+        provider: "glm-4.6v",
+        apiKey: this.apiKey,
+        apiBase: this.apiBase,
+      };
+    }
+
+    // Build vision config from vision model
+    const visionProvider = this.detectVisionProvider(visionModel);
+
+    console.log(
+      `Using vision fallback model: ${visionModel.title || visionModel.model} (${visionProvider})`,
+    );
+
+    return {
+      enabled: true,
+      provider: visionProvider,
+      apiKey: visionModel.apiKey,
+      apiBase: visionModel.apiBase,
+    };
   }
   // Update the streamChat method:
   async *streamChat(
@@ -1158,17 +1277,21 @@ export abstract class BaseLLM implements ILLM {
 
       messages = compiledChatMessages;
     }
-    const visionConfig: any = {
-      enabled: true,
-      apiBase: this.apiBase,
-      provider: "glm-4.6v",
-      apiKey: this.apiKey,
-    };
+
+    // Dynamic vision configuration - will search for vision_llm model
+    // Note: allModels parameter not available in current context, so will use fallback
+    const visionConfig = await this.getVisionConfig(messages);
+
     if (visionConfig?.enabled && this.messagesContainImages(messages)) {
       console.log("MESSAGES BEFORE VISION PREPROCESSING:", messages);
+      console.log("Using vision config:", {
+        provider: visionConfig.provider,
+        apiBase: visionConfig.apiBase,
+        hasApiKey: !!visionConfig.apiKey,
+      });
       messages = await preprocessMessagesForVision(
         messages,
-        { vision: false },
+        { vision: this.supportsNativeVision() },
         visionConfig,
       );
       console.log("MESSAGES AFTER VISION PREPROCESSING:", messages);

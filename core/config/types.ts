@@ -938,6 +938,9 @@ declare global {
   
   export interface ModelCapability {
     uploadImage?: boolean;
+    tools?: boolean;
+    nextEdit?: boolean;
+    vision?: boolean;
   }
   
   export interface ModelDescription {
